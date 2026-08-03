@@ -26,12 +26,10 @@
         region: "{{ aws_region }}"
 
     - name: Read back the foundation SSM parameter to prove read access
-      amazon.aws.ssm_parameter:
-        name: "/sk-spacelift-test/foundation/bucket_name"
-        region: "{{ aws_region }}"
-      register: ssm_result
+      ansible.builtin.set_fact:
+        ssm_value: "{{ lookup('amazon.aws.ssm_parameter', '/sk-spacelift-test/foundation/bucket_name', region=aws_region) }}"
       ignore_errors: true
 
     - name: Report what was read
       ansible.builtin.debug:
-        msg: "SSM parameter value: {{ ssm_result.parameter.value | default('not found') }}"
+        msg: "SSM parameter value: {{ ssm_value | default('not found') }}"
