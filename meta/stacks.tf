@@ -8,7 +8,7 @@ resource "spacelift_stack" "foundation" {
   branch       = var.vcs_branch
   project_root = "workloads/foundation"
 
-  terraform_version = "1.9.8"
+  terraform_version = "1.5.7"
   autodeploy         = false
   labels             = ["test-stack", "foundation", "aws"]
 }
@@ -20,7 +20,7 @@ resource "spacelift_stack" "app" {
   branch       = var.vcs_branch
   project_root = "workloads/app"
 
-  terraform_version = "1.9.8"
+  terraform_version = "1.5.7"
   autodeploy         = false
   labels             = ["test-stack", "app", "aws"]
 }
