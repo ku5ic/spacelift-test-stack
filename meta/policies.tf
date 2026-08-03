@@ -67,16 +67,12 @@ resource "spacelift_policy" "notification_failures_only" {
   description = "Verify the notification rule name (webhook/slack/custom) against docs.spacelift.io/concepts/policy/notification-policy for your account"
   type        = "NOTIFICATION"
   body        = file("${path.module}/policies/notification-failures-only.rego")
-}
 
-resource "spacelift_policy_attachment" "notification_failures_only_foundation" {
-  policy_id = spacelift_policy.notification_failures_only.id
-  stack_id  = spacelift_stack.foundation.id
-}
-
-resource "spacelift_policy_attachment" "notification_failures_only_app" {
-  policy_id = spacelift_policy.notification_failures_only.id
-  stack_id  = spacelift_stack.app.id
+  # NOTIFICATION policies can't use spacelift_policy_attachment (same
+  # restriction as LOGIN); they attach via the autoattach: label
+  # convention instead. foundation and app both carry the "aws" label,
+  # ansible_config doesn't, so this matches only those two stacks.
+  labels = ["autoattach:aws"]
 }
 
 resource "spacelift_policy" "trigger_dependents" {
