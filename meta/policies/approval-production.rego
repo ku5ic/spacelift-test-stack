@@ -1,15 +1,14 @@
 package spacelift
 
 # Requires at least one approval and zero rejections before an apply can
-# proceed. The exact shape of input.session.approved/rejected is documented
-# at docs.spacelift.io/concepts/policy/approval-policy, verify before relying
-# on this in a real account.
+# proceed. Confirmed against docs.spacelift.io/concepts/policy/approval-policy:
+# reviews live under input.reviews.current, not input.session.
 
 approve {
-	count(input.session.approved) > 0
-	count(input.session.rejected) == 0
+	count(input.reviews.current.approvals) > 0
+	count(input.reviews.current.rejections) == 0
 }
 
 reject {
-	count(input.session.rejected) > 0
+	count(input.reviews.current.rejections) > 0
 }
