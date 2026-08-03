@@ -1,0 +1,5 @@
+version: "1"
+before_init:
+  - echo "foundation stack: before_init hook fired"
+after_apply:
+  - echo "foundation stack: after_apply hook fired"

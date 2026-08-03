@@ -1,0 +1,37 @@
+---
+- name: Exercise Spacelift's native Ansible vendor against the foundation stack's AWS resources
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    bucket_name: "{{ lookup('env', 'FOUNDATION_BUCKET_NAME') }}"
+    aws_region: "{{ lookup('env', 'TF_VAR_aws_region') | default('eu-west-1', true) }}"
+
+  tasks:
+    - name: Fail fast if the bucket name did not arrive via the stack dependency
+      ansible.builtin.fail:
+        msg: >-
+          FOUNDATION_BUCKET_NAME is empty. Check the spacelift_stack_dependency_reference
+          in meta/dependencies.tf and confirm the foundation stack has a completed
+          tracked run with an apply phase.
+      when: bucket_name | length == 0
+
+    - name: Write a marker object into the foundation bucket
+      amazon.aws.s3_object:
+        bucket: "{{ bucket_name }}"
+        object: "ansible-config/marker.txt"
+        content: "written by the ansible-config stack via amazon.aws, proving the foundation -> ansible stack dependency and the native Ansible vendor both work"
+        mode: put
+        region: "{{ aws_region }}"
+
+    - name: Read back the foundation SSM parameter to prove read access
+      amazon.aws.ssm_parameter:
+        name: "/sk-spacelift-test/foundation/bucket_name"
+        region: "{{ aws_region }}"
+      register: ssm_result
+      ignore_errors: true
+
+    - name: Report what was read
+      ansible.builtin.debug:
+        msg: "SSM parameter value: {{ ssm_result.parameter.value | default('not found') }}"
