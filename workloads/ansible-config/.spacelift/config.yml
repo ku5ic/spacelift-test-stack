@@ -1,4 +1,6 @@
 version: "1"
-before_init:
-  - python3 -m pip install boto3 botocore
-  - ansible-galaxy collection install -r requirements.yml
+
+stack_defaults:
+  before_init:
+    - python3 -m pip install boto3 botocore
+    - ansible-galaxy collection install -r requirements.yml
