@@ -47,7 +47,7 @@ Check these against `docs.spacelift.io` or `terraform providers schema -json` be
 
 ## Bootstrapping
 
-Both paths below produce the same end state: three stacks, one context, six policies, one AWS integration, one dependency wiring, one registered module. Pick whichever fits how you're exercising your instance.
+All three paths below produce the same end state: three stacks, one context, six policies, one AWS integration, one dependency wiring, one registered module. Pick whichever fits how you're exercising your instance.
 
 ### Option A: Terraform (`meta/`)
 
@@ -61,7 +61,7 @@ Use this to also exercise the "Spacelift managing Spacelift" pattern itself.
 3. `cd meta`, set `vcs_repository`, `vcs_branch`, `aws_iam_role_arn` (either via `terraform.tfvars` or `-var`), export an administrative Spacelift API key (`SPACELIFT_API_KEY_ENDPOINT`, `SPACELIFT_API_KEY_ID`, `SPACELIFT_API_KEY_SECRET`), then `terraform init && terraform plan`.
 4. Apply. This creates the three stacks, the context, the policies, the dependency wiring, and the AWS integration attachments.
 5. Trigger a run on `test-stack-foundation` first (it has no dependencies). Once it completes with an apply phase, its outputs become available and `test-stack-app` / `test-stack-ansible-config` can be triggered.
-6. Optional: once this is stable, point a fourth Spacelift stack at `meta/` itself with a Space Admin role attachment, so future changes to this file are applied through Spacelift rather than locally. This is the fully self-managing setup Spacelift's own docs describe.
+6. Optional: once this is stable, promote it to the self-managing setup in Option C below, so future changes to `meta/` are applied through Spacelift rather than locally.
 
 ### Option B: Manual, through the Spacelift UI
 
@@ -99,6 +99,17 @@ Use this to exercise stack creation, contexts, dependencies, and policies as a u
 
 Doing this through the UI also sidesteps the one thing in this repo that couldn't be verified against a live schema (see "Things flagged for verification" above): you pick the Ansible vendor and type the playbook path directly, instead of trusting the `ansible {}` provider block.
 
+### Option C: Single administrative stack, orchestrated
+
+Same end state as Option A, but `meta/`'s apply happens inside a Spacelift run instead of on your machine, so one stack orchestrates the rest. This is the "Spacelift managing Spacelift" pattern running for real, not just locally applied.
+
+1. Create the AWS IAM role (same as Option A step 1).
+2. Source Control > connect the VCS integration (same as Option B step 1).
+3. Create one stack: project root `meta`, Terraform vendor, **Administrative = true**. Marking a stack administrative is what auto-injects `SPACELIFT_API_TOKEN` into its runs, so `provider "spacelift" {}` (meta/providers.tf, already zero-config) authenticates with no API key setup at all.
+4. Set env vars on that one stack: `TF_VAR_vcs_repository=<owner>/<repo>`, `TF_VAR_vcs_branch=main`, `TF_VAR_aws_iam_role_arn=<role ARN from step 1>`.
+5. Trigger a run, review the plan, confirm apply. This single run creates the three workload stacks, the context, the six policies, the AWS integration, and the module registry entry - everything `meta/*.tf` defines.
+6. Trigger `test-stack-foundation` first, then `test-stack-app` / `test-stack-ansible-config` (same ordering as the other two options - the meta stack doesn't auto-fire these).
+
 ## Manual/UI-only pieces worth exploring separately
 
 These either need live infra context this scaffold cannot fabricate, or don't have a stable provider resource to script safely:
@@ -114,3 +125,4 @@ Destroy `app` and `ansible-config` stacks first (their state references `foundat
 
 - Option A (`meta/`): `terraform destroy` inside `meta/` to remove the Spacelift-side resources themselves.
 - Option B (manual): delete the three stacks, the context, the six policies, the AWS integration, and the registered module through the UI, in that order.
+- Option C (administrative stack): trigger a destroy run on the meta stack itself; it tears down the context, policies, AWS integration, and module registry entry it created.
