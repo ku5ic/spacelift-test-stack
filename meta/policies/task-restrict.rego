@@ -2,15 +2,16 @@ package spacelift
 
 # Blocks destructive one-off Tasks (ad-hoc commands run outside the normal
 # plan/apply flow), e.g. `terraform destroy` or `terraform state rm`.
+# Migrated from a TASK policy (deprecated) to APPROVAL, following
+# docs.spacelift.io/concepts/policy/task-run-policy's own migration example:
+# reject on the restricted condition, approve everything else.
 
-deny[msg] {
-	some i
-	contains(input.command[i], "destroy")
-	msg := "destructive commands are not allowed as ad-hoc Tasks on this stack"
+reject {
+	contains(input.run.command, "destroy")
 }
 
-deny[msg] {
-	some i
-	contains(input.command[i], "state rm")
-	msg := "state manipulation is not allowed as an ad-hoc Task on this stack"
+reject {
+	contains(input.run.command, "state rm")
 }
+
+approve { not reject }

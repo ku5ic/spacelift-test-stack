@@ -53,7 +53,7 @@ resource "spacelift_policy_attachment" "approval_production_app" {
 
 resource "spacelift_policy" "task_restrict" {
   name = "restrict-task-commands"
-  type = "TASK"
+  type = "APPROVAL"
   body = file("${path.module}/policies/task-restrict.rego")
 }
 
