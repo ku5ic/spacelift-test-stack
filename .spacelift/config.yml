@@ -9,3 +9,8 @@ stacks:
     before_init:
       - python3 -m pip install boto3 botocore
       - ansible-galaxy collection install -r requirements.yml
+    # Apply runs in a separate environment from plan (the workspace gets
+    # archived and re-uploaded between phases), so before_init's pip
+    # install doesn't carry over - it has to run again here.
+    before_apply:
+      - python3 -m pip install boto3 botocore
