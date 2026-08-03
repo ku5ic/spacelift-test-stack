@@ -103,10 +103,12 @@ Doing this through the UI also sidesteps the one thing in this repo that couldn'
 
 Same end state as Option A, but `meta/`'s apply happens inside a Spacelift run instead of on your machine, so one stack orchestrates the rest. This is the "Spacelift managing Spacelift" pattern running for real, not just locally applied.
 
-1. Create the AWS IAM role (same as Option A step 1).
+1. Get the trust policy, then create the AWS IAM role:
+   - Cloud Integrations > AWS > Create integration. Name it, and the screen shows a ready-made trust-policy JSON with your instance's real AWS principal account ID and ExternalId pattern already filled in - copy it, then cancel out without saving. `meta/`'s own apply creates this integration under the same name; a manually saved one first will conflict with it.
+   - AWS Console > IAM > Roles > Create role > Custom trust policy > paste the copied JSON > attach a permissions policy (`AdministratorAccess`/`PowerUserAccess` is fine for a throwaway test account) > name it > create > copy the resulting Role ARN.
 2. Source Control > connect the VCS integration (same as Option B step 1).
 3. Create one stack: project root `meta`, Terraform vendor, **Administrative = true**. Marking a stack administrative is what auto-injects `SPACELIFT_API_TOKEN` into its runs, so `provider "spacelift" {}` (meta/providers.tf, already zero-config) authenticates with no API key setup at all.
-4. Set env vars on that one stack: `TF_VAR_vcs_repository=<owner>/<repo>`, `TF_VAR_vcs_branch=main`, `TF_VAR_aws_iam_role_arn=<role ARN from step 1>`.
+4. On that stack's **Environment** tab > **Add variable**, add `TF_VAR_vcs_repository=<owner>/<repo>` and `TF_VAR_aws_iam_role_arn=<role ARN from step 1>` (`TF_VAR_vcs_branch` only needed if you're not on `main`, it already defaults to that).
 5. Trigger a run, review the plan, confirm apply. This single run creates the three workload stacks, the context, the six policies, the AWS integration, and the module registry entry - everything `meta/*.tf` defines.
 6. Trigger `test-stack-foundation` first, then `test-stack-app` / `test-stack-ansible-config` (same ordering as the other two options - the meta stack doesn't auto-fire these).
 
