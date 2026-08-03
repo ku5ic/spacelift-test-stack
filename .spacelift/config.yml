@@ -1,0 +1,11 @@
+version: "2"
+
+# Repository-root runtime config (docs.spacelift.io/concepts/configuration/runtime-configuration):
+# this file only takes effect here, not inside a project's own subdirectory.
+# Scoped to the ansible-config stack by its slug so it doesn't run
+# ansible-galaxy/pip against the two Terraform stacks.
+stacks:
+  test-stack-ansible-config:
+    before_init:
+      - python3 -m pip install boto3 botocore
+      - ansible-galaxy collection install -r requirements.yml
