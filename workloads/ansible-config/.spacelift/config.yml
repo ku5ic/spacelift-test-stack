@@ -1,4 +1,4 @@
 version: "1"
 before_init:
-  - pip3 install boto3 botocore
+  - python3 -m pip install boto3 botocore
   - ansible-galaxy collection install -r requirements.yml
