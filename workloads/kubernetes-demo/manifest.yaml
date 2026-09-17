@@ -1,0 +1,11 @@
+# The Kubernetes vendor runs `kubectl diff` on plan and `kubectl apply` on
+# apply, against whatever kubeconfig the run environment provides.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-stack-marker
+  labels:
+    app.kubernetes.io/managed-by: spacelift
+data:
+  source: spacelift-test-stack
+  note: written by the kubernetes stack

@@ -1,0 +1,3 @@
+name: test-stack-pulumi
+runtime: python
+description: Minimal Pulumi program so the Pulumi vendor has something to plan

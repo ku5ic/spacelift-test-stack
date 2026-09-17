@@ -1,5 +1,6 @@
-# Three stacks exercising Spacelift's multi-IaC support: two Terraform
-# stacks with a real dependency between them, plus one native Ansible stack.
+# The three core stacks: two Terraform, one native Ansible. Between them
+# they turn on most of the per-stack toggles the UI exposes, so the Stack
+# Settings screens have something other than defaults to show.
 
 resource "spacelift_stack" "foundation" {
   name         = "test-stack-foundation"
@@ -7,10 +8,27 @@ resource "spacelift_stack" "foundation" {
   repository   = var.vcs_repository
   branch       = var.vcs_branch
   project_root = "workloads/foundation"
+  space_id     = spacelift_space.development.id
 
-  terraform_version = "1.5.7"
-  autodeploy         = false
-  labels             = ["test-stack", "foundation", "aws"]
+  terraform_version       = "1.5.7"
+  terraform_workflow_tool = "TERRAFORM_FOSS"
+  terraform_workspace     = "default"
+  autodeploy              = false
+  labels                  = ["test-stack", "foundation", "aws"]
+
+  # Every other stack in the repo depends on this one, so it gets the
+  # protective settings: deletion guard on, outputs readable by the other
+  # stacks, state values sanitized in logs.
+  protect_from_deletion            = true
+  terraform_external_state_access  = true
+  terraform_smart_sanitization     = true
+  enable_well_known_secret_masking = true
+  enable_local_preview             = true
+  worker_pool_id                   = var.attach_worker_pool ? spacelift_worker_pool.test.id : null
+
+  # autoretry re-queues a run that a newer commit invalidated. Left off so
+  # a failed run stays on screen long enough to read.
+  autoretry = false
 }
 
 resource "spacelift_stack" "app" {
@@ -19,10 +37,23 @@ resource "spacelift_stack" "app" {
   repository   = var.vcs_repository
   branch       = var.vcs_branch
   project_root = "workloads/app"
+  space_id     = spacelift_space.development.id
 
-  terraform_version = "1.5.7"
-  autodeploy         = false
-  labels             = ["test-stack", "app", "aws"]
+  terraform_version       = "1.5.7"
+  terraform_workflow_tool = "TERRAFORM_FOSS"
+  autodeploy              = false
+  labels                  = ["test-stack", "app", "aws"]
+
+  # Run promotion lets a proposed run's plan be promoted straight to an
+  # apply from the run screen, instead of re-planning on the tracked run.
+  allow_run_promotion  = true
+  enable_local_preview = true
+
+  # Pulls the shared module's sources into the workspace as well, so an
+  # edit under modules/ shows up in this stack's diff.
+  additional_project_globs = ["modules/s3-bucket/**"]
+
+  worker_pool_id = var.attach_worker_pool ? spacelift_worker_pool.test.id : null
 }
 
 resource "spacelift_stack" "ansible_config" {
@@ -31,19 +62,13 @@ resource "spacelift_stack" "ansible_config" {
   repository   = var.vcs_repository
   branch       = var.vcs_branch
   project_root = "workloads/ansible-config"
+  space_id     = spacelift_space.development.id
 
   autodeploy = false
   labels     = ["test-stack", "ansible"]
 
-  # NOTE: verify this block's exact name and arguments against the current
-  # spacelift-io/spacelift provider docs before the first apply. The registry
-  # docs render client-side and could not be scraped verbatim while drafting
-  # this scaffold. The Spacelift UI confirms an Ansible vendor with a
-  # "Playbook" field when creating a stack manually (Create stack > vendor
-  # config); this block is the provider-managed equivalent. If it does not
-  # match, create this one stack manually in the UI instead and leave it out
-  # of this file, everything else (context, dependency, policies) still
-  # applies to it by stack_id once created.
+  worker_pool_id = var.attach_worker_pool ? spacelift_worker_pool.test.id : null
+
   ansible {
     playbook = "playbook.yml"
   }
