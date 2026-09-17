@@ -1,0 +1,68 @@
+# Blueprint body. Rendered by templatefile() so the repo, branch and space
+# come from meta/'s variables; $${{ ... }} escapes Terraform's own
+# interpolation so the rendered file reaches Spacelift as a CEL expression.
+
+inputs:
+  - id: stack_name
+    name: Stack name
+    description: Name for the new stack. Also used as the AWS resource name prefix.
+    type: short_text
+    default: my-new-stack
+
+  - id: environment
+    name: Environment
+    description: Picks which labels the stack is created with
+    type: select
+    options:
+      - development
+      - staging
+      - production
+    default: development
+
+  - id: auto_deploy
+    name: Auto-deploy
+    description: Apply tracked runs without a manual confirmation
+    type: boolean
+    default: false
+
+options:
+  # Leave the first run to the operator so the self-service form doesn't
+  # apply to AWS the moment someone clicks Create.
+  trigger_run: false
+
+stack:
+  name: $${{ inputs.stack_name }}
+  space: ${space_id}
+  description: Self-service stack created from the test-stack blueprint
+  labels:
+    - test-stack
+    - blueprint
+    - env:$${{ inputs.environment }}
+    - aws
+  administrative: false
+  auto_deploy: $${{ inputs.auto_deploy }}
+  protect_from_deletion: false
+  local_preview_enabled: true
+
+  vcs:
+    provider: ${vcs_provider}
+    repository: ${vcs_repository}
+    branch: ${vcs_branch}
+    project_root: workloads/foundation
+
+  vendor:
+    terraform:
+      manage_state: true
+      version: "1.5.7"
+      workflow_tool: TERRAFORM_FOSS
+
+  # Contexts, policies, cloud integrations, environment variables, mounted
+  # files and hooks are all configurable here too, but the exact sub-key
+  # names weren't confirmable from the public docs while writing this, and a
+  # PUBLISHED blueprint with a bad key fails the whole apply. The UI's
+  # blueprint editor validates live - add them there first, then copy the
+  # working YAML back into this file.
+  #
+  # Nothing is lost in the meantime: the labels above make the
+  # created stack pick up shared-hooks-context (autoattach:test-stack) and
+  # the notification policy (autoattach:aws) on its own.

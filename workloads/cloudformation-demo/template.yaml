@@ -1,0 +1,22 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Minimal CloudFormation stack so the CFN vendor has something to change-set
+
+Parameters:
+  NamePrefix:
+    Type: String
+    Default: sk-spacelift-test
+
+Resources:
+  Marker:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub "/${NamePrefix}/cloudformation/hello"
+      Type: String
+      Value: written by the cloudformation stack
+      Tags:
+        Environment: test
+        ManagedBy: spacelift
+
+Outputs:
+  MarkerName:
+    Value: !Ref Marker
