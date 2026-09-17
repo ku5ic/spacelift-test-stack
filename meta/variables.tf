@@ -1,7 +1,7 @@
 # Required: the two things that can't be guessed.
 
 variable "vcs_repository" {
-  description = "owner/repo of this repository as registered in Spacelift's VCS integration"
+  description = "Repository name WITHOUT the owner, e.g. spacelift-test-stack. The provider is explicit about this: the owner comes from the VCS integration, not from this string."
   type        = string
 }
 

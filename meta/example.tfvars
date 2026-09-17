@@ -1,6 +1,7 @@
 # Copy to terraform.tfvars and fill in. Only the first two are required.
 
-vcs_repository   = "your-org/spacelift-test-stack"
+# Repository NAME only - no owner. The owner comes from your VCS integration.
+vcs_repository   = "spacelift-test-stack"
 aws_iam_role_arn = "arn:aws:iam::123456789012:role/spacelift-test-stack"
 
 # vcs_branch   = "main"

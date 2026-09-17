@@ -11,7 +11,9 @@ Cost: stays inside AWS free tier (S3, IAM, SSM Parameter Store, CloudWatch Logs)
 1. Create an AWS IAM role Spacelift can assume (Cloud Integrations > AWS > Create integration shows you the exact trust policy JSON, including your account's principal and external ID). `PowerUserAccess` is fine on a throwaway account.
 2. Push this repo to your VCS and connect it under Source Control.
 3. Create one stack in the UI: project root `meta`, Terraform vendor, **Administrative = true**. Administrative injects `SPACELIFT_API_TOKEN`, so `provider "spacelift" {}` needs no API key.
-4. On that stack's Environment tab, add `TF_VAR_vcs_repository=<owner>/<repo>` and `TF_VAR_aws_iam_role_arn=<role ARN>`.
+4. On that stack's Environment tab, add `TF_VAR_vcs_repository=<repo-name>` and `TF_VAR_aws_iam_role_arn=<role ARN>`.
+
+   `vcs_repository` is the repository **name only**, no owner - the provider says so outright, and the owner comes from the VCS integration. If your repo sits outside the default integration's namespace, add a `github_enterprise { namespace = "..." }` (or the block matching your provider) to each stack in `meta/stacks.tf`.
 5. Trigger a run, confirm the apply.
 6. Trigger `test-stack-foundation`. Its outputs unblock `test-stack-app`, `test-stack-ansible-config` and `test-stack-tofu`.
 
