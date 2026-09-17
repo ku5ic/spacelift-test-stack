@@ -1,22 +1,23 @@
 # Roles and role attachments: Spacelift's newer RBAC model, where a role is
 # a named bundle of actions and an attachment binds that role to a subject
-# (user, API key, IdP group or stack) within one space.
+# (user, IdP group or stack) within one space.
 #
-# Actions are read from the spacelift_role_actions data source rather than
-# hardcoded, so this stays correct as the action list grows. Filter, don't
-# type them out.
-
-data "spacelift_role_actions" "all" {}
+# The actions below are the ones the provider documents by name on
+# spacelift_role.actions. They are NOT read from the spacelift_role_actions
+# data source: that data source works by introspecting the GraphQL schema
+# for the Action enum, and introspection is disabled on most accounts, where
+# it fails the plan outright with:
+#
+#   could not fetch role actions: enum type Action not found in schema
+#
+# If introspection is enabled on yours, swap these locals for
+# `data.spacelift_role_actions.all.actions` filtered by regex - that stays
+# correct as Spacelift adds actions, which a hardcoded list does not.
 
 locals {
-  viewer_actions = [for action in data.spacelift_role_actions.all.actions : action if can(regex("_READ$", action))]
-
-  operator_actions = distinct(concat(
-    local.viewer_actions,
-    [for action in data.spacelift_role_actions.all.actions : action if can(regex("^RUN_", action))],
-  ))
-
-  admin_actions = [for action in data.spacelift_role_actions.all.actions : action if can(regex("^SPACE_ADMIN$", action))]
+  viewer_actions   = ["SPACE_READ"]
+  operator_actions = ["SPACE_READ", "SPACE_WRITE", "RUN_TRIGGER"]
+  admin_actions    = ["SPACE_ADMIN"]
 }
 
 resource "spacelift_role" "viewer" {
