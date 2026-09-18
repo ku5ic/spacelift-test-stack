@@ -4,15 +4,16 @@
 #
 # The actions below are the ones the provider documents by name on
 # spacelift_role.actions. They are NOT read from the spacelift_role_actions
-# data source: that data source works by introspecting the GraphQL schema
-# for the Action enum, and introspection is disabled on most accounts, where
-# it fails the plan outright with:
+# data source, which introspects the GraphQL schema for the Action enum and
+# fails the whole plan when it can't:
 #
 #   could not fetch role actions: enum type Action not found in schema
 #
-# If introspection is enabled on yours, swap these locals for
-# `data.spacelift_role_actions.all.actions` filtered by regex - that stays
-# correct as Spacelift adds actions, which a hardcoded list does not.
+# That failure looks identical whether introspection is disabled on the
+# account or the credentials are simply bad, which makes it a poor thing to
+# depend on during setup. A hardcoded list goes stale as Spacelift adds
+# actions; swap back to `data.spacelift_role_actions.all.actions` filtered
+# by regex once the account is known good.
 
 locals {
   viewer_actions   = ["SPACE_READ"]
