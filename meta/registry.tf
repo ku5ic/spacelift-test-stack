@@ -35,7 +35,8 @@ resource "spacelift_version" "s3_bucket" {
 # do - the actual provider binaries are pushed with `spacectl provider
 # version create`, so this shows up as a provider with no versions yet.
 resource "spacelift_terraform_provider" "demo" {
-  type        = "test-stack-demo"
+  # Provider type takes lowercase letters and numbers only - no hyphens.
+  type        = "teststackdemo"
   space_id    = spacelift_space.test_stack.id
   description = "Placeholder private provider. Publish versions with `spacectl provider version create`."
   public      = false

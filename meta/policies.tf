@@ -33,8 +33,9 @@ resource "spacelift_policy" "access" {
   description = "ACCESS policy: any logged-in user can read, admins and the test team can write"
   type        = "ACCESS"
   body        = file("${path.module}/policies/access-team-scoped.rego")
-  space_id    = spacelift_space.test_stack.id
-  labels      = ["test-stack"]
+  # ACCESS is a legacy policy type: the API rejects it in any space but root.
+  space_id = "root"
+  labels   = ["test-stack"]
 }
 
 resource "spacelift_policy_attachment" "access_foundation" {

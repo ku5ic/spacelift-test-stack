@@ -43,9 +43,10 @@ resource "spacelift_saved_filter" "failed_stacks" {
 }
 
 resource "spacelift_saved_filter" "aws_stacks" {
-  name      = "test-stack: AWS-backed stacks only"
-  type      = "stacks"
-  is_public = false
+  name = "test-stack: AWS-backed stacks only"
+  type = "stacks"
+  # Machine users can only create public filters, and meta/ runs as one.
+  is_public = true
 
   data = jsonencode({
     key = "activeFilters"
