@@ -11,8 +11,14 @@ resource "spacelift_aws_integration" "test" {
   generate_credentials_in_worker = false
   duration_seconds               = 1800
   region                         = var.aws_region
-  tag_assume_role                = true
   labels                         = ["test-stack"]
+
+  # tag_assume_role is off because session tags need more than sts:AssumeRole:
+  # AWS requires the trust policy to allow the sts:TagSession permissions-only
+  # action as well, and AssumeRole fails outright without it. The trust policy
+  # Spacelift hands you on the integration setup screen does not include it.
+  # See README > Bootstrapping for the statement to add before flipping this on.
+  tag_assume_role = false
 
   # Leave autoattach off: the explicit attachments below are what make the
   # integration's Attached stacks list interesting to look at.

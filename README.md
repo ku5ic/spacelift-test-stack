@@ -9,8 +9,14 @@ Cost: stays inside AWS free tier (S3, IAM, SSM Parameter Store, CloudWatch Logs)
 ## Quick start
 
 1. Create an AWS IAM role Spacelift can assume (Cloud Integrations > AWS > Create integration shows you the exact trust policy JSON, including your account's principal and external ID). `PowerUserAccess` is fine on a throwaway account.
+
+   That JSON allows `sts:AssumeRole` only, which is all this repo needs as shipped. To turn `tag_assume_role` back on in `meta/aws_integration.tf`, add a second statement allowing `sts:TagSession` to the same principal under the same `sts:ExternalId` condition - AWS fails the whole AssumeRole call, not just the tagging, when session tags are passed to a role whose trust policy omits it.
+
 2. Push this repo to your VCS and connect it under Source Control.
-3. Create one stack in the UI: project root `meta`, Terraform vendor, **Administrative = true**. Administrative injects `SPACELIFT_API_TOKEN`, so `provider "spacelift" {}` needs no API key.
+3. Create one stack in the UI: project root `meta`, **OpenTofu** vendor (`meta/versions.tf` needs >= 1.6.0, and Spacelift's Terraform FOSS workflow stops at 1.5.7). Then open its Settings > Roles and assign **Space admin** on space `root`. That is what injects `SPACELIFT_API_TOKEN`, so `provider "spacelift" {}` needs no API key.
+
+   The old **Administrative = true** toggle is gone from Stack settings > Behavior; the provider deprecates the field too. Roles are the replacement.
+
 4. On that stack's Environment tab, add `TF_VAR_vcs_repository=<repo-name>` and `TF_VAR_aws_iam_role_arn=<role ARN>`.
 
    `vcs_repository` is the repository **name only**, no owner - the provider says so outright, and the owner comes from the VCS integration. If your repo sits outside the default integration's namespace, add a `github_enterprise { namespace = "..." }` (or the block matching your provider) to each stack in `meta/stacks.tf`.
