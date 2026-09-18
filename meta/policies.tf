@@ -1,6 +1,11 @@
 # Eight policies covering every attachable policy type the provider accepts
-# (ACCESS, APPROVAL, GIT_PUSH, LOGIN, PLAN, TRIGGER, NOTIFICATION) plus the
+# (APPROVAL, GIT_PUSH, LOGIN, PLAN, TRIGGER, NOTIFICATION) plus the
 # APPROVAL-based replacement for the deprecated TASK type.
+#
+# ACCESS is absent on purpose: Spacelift disabled stack access policies on
+# 2026-05-30, and the API now rejects them outside a legacy space, which
+# accounts created after Spaces shipped do not have. Space access control
+# replaces it - see rbac.tf.
 #
 # engine_type defaults to REGO_V0 on the provider and every body here is
 # written in v0 syntax (no `if`, no `contains`). Set engine_type = "REGO_V1"
@@ -26,21 +31,6 @@ resource "spacelift_policy" "login" {
   type        = "LOGIN"
   body        = file("${path.module}/policies/login.rego")
   labels      = ["test-stack"]
-}
-
-resource "spacelift_policy" "access" {
-  name        = "stack-access-team-scoped"
-  description = "ACCESS policy: any logged-in user can read, admins and the test team can write"
-  type        = "ACCESS"
-  body        = file("${path.module}/policies/access-team-scoped.rego")
-  # ACCESS is a legacy policy type: the API rejects it in any space but root.
-  space_id = "root"
-  labels   = ["test-stack"]
-}
-
-resource "spacelift_policy_attachment" "access_foundation" {
-  policy_id = spacelift_policy.access.id
-  stack_id  = spacelift_stack.foundation.id
 }
 
 resource "spacelift_policy" "git_push" {

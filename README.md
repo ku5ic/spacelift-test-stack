@@ -14,6 +14,7 @@ Cost: stays inside AWS free tier (S3, IAM, SSM Parameter Store, CloudWatch Logs)
 4. On that stack's Environment tab, add `TF_VAR_vcs_repository=<repo-name>` and `TF_VAR_aws_iam_role_arn=<role ARN>`.
 
    `vcs_repository` is the repository **name only**, no owner - the provider says so outright, and the owner comes from the VCS integration. If your repo sits outside the default integration's namespace, add a `github_enterprise { namespace = "..." }` (or the block matching your provider) to each stack in `meta/stacks.tf`.
+
 5. Trigger a run, confirm the apply.
 6. Trigger `test-stack-foundation`. Its outputs unblock `test-stack-app`, `test-stack-ansible-config` and `test-stack-tofu`.
 
@@ -47,43 +48,43 @@ modules/s3-bucket/         Published to the private Module Registry
 
 ## What's on by default
 
-| UI area | What you'll find | Source |
-| --- | --- | --- |
-| Spaces | `test-stack` with `development` / `staging` / `production` children, all inheriting entities | `meta/spaces.tf` |
-| Stacks | 5 stacks across 3 vendors (Terraform, OpenTofu, Terragrunt, Ansible), each with different settings toggled | `meta/stacks.tf`, `meta/stacks_multi_iac.tf` |
-| Stack dependencies | Two levels deep: foundation -> app / ansible / tofu, tofu -> terragrunt, with output-to-input mapping | `meta/dependencies.tf` |
-| Contexts | One explicit-attachment context (env vars, a write-only var, a mounted file), one autoattach context carrying lifecycle hooks | `meta/contexts.tf` |
-| Policies | ACCESS, APPROVAL x2, GIT_PUSH, LOGIN, NOTIFICATION, PLAN x2, TRIGGER | `meta/policies.tf`, `meta/policies/*.rego` |
-| Notifications | Inbox notifications on every finished and failed run, no external endpoint needed | `meta/policies/notification-failures-only.rego` |
-| Cloud integrations | AWS via STS AssumeRole, attached to 5 stacks and the module | `meta/aws_integration.tf` |
-| Module registry | `s3-bucket` module with its own worker pool, workflow tool and preview settings | `meta/registry.tf` |
-| Provider registry | One private provider entry, versions pushed separately with `spacectl` | `meta/registry.tf` |
-| Blueprints | One PUBLISHED (self-service form with text, select and boolean inputs), one DRAFT | `meta/blueprints.tf` |
-| Worker pools | One private pool plus one VCS agent pool, both created empty | `meta/worker_pools.tf` |
-| Scheduling | Daily drift detection on foundation, half-hourly reconciling drift on tofu, a nightly scheduled run, a weekly scheduled task | `meta/scheduling.tf` |
-| Roles / RBAC | viewer / operator / admin roles built from the `spacelift_role_actions` data source, with the viewer role bound to a stack | `meta/rbac.tf` |
-| Saved filters | Three saved views, public and private | `meta/saved_filters.tf` |
+| UI area            | What you'll find                                                                                                              | Source                                          |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| Spaces             | `test-stack` with `development` / `staging` / `production` children, all inheriting entities                                  | `meta/spaces.tf`                                |
+| Stacks             | 5 stacks across 3 vendors (Terraform, OpenTofu, Terragrunt, Ansible), each with different settings toggled                    | `meta/stacks.tf`, `meta/stacks_multi_iac.tf`    |
+| Stack dependencies | Two levels deep: foundation -> app / ansible / tofu, tofu -> terragrunt, with output-to-input mapping                         | `meta/dependencies.tf`                          |
+| Contexts           | One explicit-attachment context (env vars, a write-only var, a mounted file), one autoattach context carrying lifecycle hooks | `meta/contexts.tf`                              |
+| Policies           | APPROVAL x2, GIT_PUSH, LOGIN, NOTIFICATION, PLAN x2, TRIGGER. ACCESS is gone: Spacelift disabled it on 2026-05-30             | `meta/policies.tf`, `meta/policies/*.rego`      |
+| Notifications      | Inbox notifications on every finished and failed run, no external endpoint needed                                             | `meta/policies/notification-failures-only.rego` |
+| Cloud integrations | AWS via STS AssumeRole, attached to 5 stacks and the module                                                                   | `meta/aws_integration.tf`                       |
+| Module registry    | `s3-bucket` module with its own worker pool, workflow tool and preview settings                                               | `meta/registry.tf`                              |
+| Provider registry  | One private provider entry, versions pushed separately with `spacectl`                                                        | `meta/registry.tf`                              |
+| Blueprints         | One PUBLISHED (self-service form with text, select and boolean inputs), one DRAFT                                             | `meta/blueprints.tf`                            |
+| Worker pools       | One private pool plus one VCS agent pool, both created empty                                                                  | `meta/worker_pools.tf`                          |
+| Scheduling         | Daily drift detection on foundation, half-hourly reconciling drift on tofu, a nightly scheduled run, a weekly scheduled task  | `meta/scheduling.tf`                            |
+| Roles / RBAC       | viewer / operator / admin roles built from the `spacelift_role_actions` data source, with the viewer role bound to a stack    | `meta/rbac.tf`                                  |
+| Saved filters      | Three saved views, all public - a machine user cannot create a private one                                                    | `meta/saved_filters.tf`                         |
 
 ## What's behind a flag
 
 Everything here costs money, needs infrastructure this repo can't create, or changes account-wide behaviour. All default to off; set them in `terraform.tfvars`.
 
-| Variable | Turns on | Needs first |
-| --- | --- | --- |
-| `notification_webhook_url` | Per-stack webhooks, the named webhook, its secret header, and the notification policy's webhook rule | An endpoint. https://webhook.site gives you one in a click. |
-| `audit_trail_webhook_url` | Audit trail webhook with custom headers | Same. |
-| `attach_worker_pool` | Points all 5 stacks at the private worker pool | A running launcher, or every run queues forever. See below. |
-| `enable_extra_vendor_stacks` | Pulumi, CloudFormation and Kubernetes stacks | A Pulumi backend, a CFN template bucket, a cluster. They populate the UI either way. |
-| `trigger_initial_runs` | A tracked run, a proposed run and a task, straight from the apply | Nothing, but it starts touching AWS during `terraform apply`. |
-| `scheduled_delete_at` | Stack TTL on the OpenTofu stack | A unix timestamp. |
-| `enable_stack_destructors` | Makes `terraform destroy` on `meta/` tear down the AWS resources too | Read the Teardown section first. |
-| `enable_gcp_service_account` | Spacelift-minted GCP service account on foundation | A GCP project to grant it something in. |
-| `azure_tenant_id` | Azure integration with autoattach | An Azure AD tenant, plus admin consent afterwards. |
-| `security_email`, `default_runner_image` | Account-wide settings | Nothing, but they affect stacks outside this playground. |
-| `idp_group_name` | IdP group mapping, plus the admin and operator role bindings that hang off it | SSO configured on the account. |
-| `invited_user_email` | User invite with a space-scoped policy | An invite flow on the account. |
-| `module_version_number` | Publishes a module version without a git tag | A semver. |
-| `manage_meta_stack` | Adopts the administrative stack running `meta/` into this configuration | A `terraform import` first. See `meta/self_management.tf`. |
+| Variable                                 | Turns on                                                                                             | Needs first                                                                          |
+| ---------------------------------------- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `notification_webhook_url`               | Per-stack webhooks, the named webhook, its secret header, and the notification policy's webhook rule | An endpoint. https://webhook.site gives you one in a click.                          |
+| `audit_trail_webhook_url`                | Audit trail webhook with custom headers                                                              | Same.                                                                                |
+| `attach_worker_pool`                     | Points all 5 stacks at the private worker pool                                                       | A running launcher, or every run queues forever. See below.                          |
+| `enable_extra_vendor_stacks`             | Pulumi, CloudFormation and Kubernetes stacks                                                         | A Pulumi backend, a CFN template bucket, a cluster. They populate the UI either way. |
+| `trigger_initial_runs`                   | A tracked run, a proposed run and a task, straight from the apply                                    | Nothing, but it starts touching AWS during `terraform apply`.                        |
+| `scheduled_delete_at`                    | Stack TTL on the OpenTofu stack                                                                      | A unix timestamp.                                                                    |
+| `enable_stack_destructors`               | Makes `terraform destroy` on `meta/` tear down the AWS resources too                                 | Read the Teardown section first.                                                     |
+| `enable_gcp_service_account`             | Spacelift-minted GCP service account on foundation                                                   | A GCP project to grant it something in.                                              |
+| `azure_tenant_id`                        | Azure integration with autoattach                                                                    | An Azure AD tenant, plus admin consent afterwards.                                   |
+| `security_email`, `default_runner_image` | Account-wide settings                                                                                | Nothing, but they affect stacks outside this playground.                             |
+| `idp_group_name`                         | IdP group mapping, plus the admin and operator role bindings that hang off it                        | SSO configured on the account.                                                       |
+| `invited_user_email`                     | User invite with a space-scoped policy                                                               | An invite flow on the account.                                                       |
+| `module_version_number`                  | Publishes a module version without a git tag                                                         | A semver.                                                                            |
+| `manage_meta_stack`                      | Adopts the administrative stack running `meta/` into this configuration                              | A `terraform import` first. See `meta/self_management.tf`.                           |
 
 ### Starting a private worker
 
@@ -104,14 +105,14 @@ Nothing here holds a credential, and `gitleaks` is clean on both the history and
 - `webhook_secret` has no default. A default in a public repo is a published secret, so empty means deliveries go unsigned rather than signed with a secret everyone can read.
 - `DEMO_MASKED_VALUE` in `meta/contexts.tf` is a literal placeholder. `write_only` controls what Spacelift shows you after saving; it does nothing about a value sitting in a public file.
 - No API keys are created. An API key is the one role subject that works without SSO, but its secret lands in Terraform state, so roles bind through the IdP group path instead. The trade-off: the operator and admin roles stay unbound until you set `idp_group_name`.
-- The worker pool private key and join token are Terraform *state*, not repo content. State is gitignored locally and lives inside Spacelift when `meta/` runs as an administrative stack. Don't paste `terraform output` results anywhere public.
+- The worker pool private key and join token are Terraform _state_, not repo content. State is gitignored locally and lives inside Spacelift when `meta/` runs as an administrative stack. Don't paste `terraform output` results anywhere public.
 - Point this at a throwaway AWS account. `PowerUserAccess` on the assumed role is suggested for convenience, and the bucket names are globally unique only because of a random suffix.
 
 ## Still worth verifying against your account
 
 Written from the provider schema (v1.55.0) and the public docs, but not exercised against a live account while drafting:
 
-- `input.session` shape in `policies/login.rego` and `policies/access-team-scoped.rego`. `docs.spacelift.io/concepts/policy/login-policy` is the reference.
+- `input.session` shape in `policies/login.rego`. `docs.spacelift.io/concepts/policy/login-policy` is the reference.
 - The `endpoint_id` the notification policy matches on. It is the named webhook's slug, visible under Webhooks in the UI, not necessarily the display name.
 - The blueprint's `attachments`, `environment` and `hooks` sub-keys. Deliberately left out of `meta/blueprints/workload-stack.yaml.tftpl` - a bad key in a PUBLISHED blueprint fails the whole apply. Build them in the UI's blueprint editor, which validates live, then paste the working YAML back.
 - Terragrunt and OpenTofu tool versions pinned in `meta/stacks_multi_iac.tf`. Check what your account's runner images actually ship.
