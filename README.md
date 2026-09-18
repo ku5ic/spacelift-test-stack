@@ -118,7 +118,7 @@ Nothing here holds a credential, and `gitleaks` is clean on both the history and
 
 Written from the provider schema (v1.55.0) and the public docs, but not exercised against a live account while drafting:
 
-- `input.session` shape in `policies/login.rego`. `docs.spacelift.io/concepts/policy/login-policy` is the reference.
+- ~~`input.session` shape in `policies/login.rego`~~. Resolved the hard way: `input.session.admin` **does not exist** in login policy input. The documented fields are `creator_ip`, `idp_subject`, `login`, `machine`, `name`, `teams`, `member`. Gating on `admin` makes the rule silently never match, and with no `default allow` the policy denies every member. Account owners and GitHub/SSO admins are exempt by design, so you will not notice until a normal member tries to log in. `policies/access-team-scoped.rego` had the same bug; that policy is gone now (ACCESS was disabled by Spacelift on 2026-05-30).
 - The `endpoint_id` the notification policy matches on. It is the named webhook's slug, visible under Webhooks in the UI, not necessarily the display name.
 - The blueprint's `attachments`, `environment` and `hooks` sub-keys. Deliberately left out of `meta/blueprints/workload-stack.yaml.tftpl` - a bad key in a PUBLISHED blueprint fails the whole apply. Build them in the UI's blueprint editor, which validates live, then paste the working YAML back.
 - Terragrunt and OpenTofu tool versions pinned in `meta/stacks_multi_iac.tf`. Check what your account's runner images actually ship.
