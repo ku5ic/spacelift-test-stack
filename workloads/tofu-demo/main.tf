@@ -29,3 +29,15 @@ resource "aws_ssm_parameter" "tofu_marker" {
     ManagedBy   = "spacelift"
   }
 }
+
+# Cloud scanning can only match aws_s3_object and aws_ssm_parameter through the
+# identity the provider writes to state; aws_sns_topic is one of the types it
+# can also derive from attributes, so it exercises the second matching path.
+resource "aws_sns_topic" "scan_marker" {
+  name = "${var.name_prefix}-tofu-scan-marker"
+
+  tags = {
+    Environment = "test"
+    ManagedBy   = "spacelift"
+  }
+}
