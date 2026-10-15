@@ -34,38 +34,24 @@
       ansible.builtin.debug:
         msg: "SSM parameter value: {{ ssm_value | default('not found') }}"
 
-    # The tasks below exist to exercise the Spacelift task Diff view, one per backend diff shape.
-    - name: Create the demo directory
-      ansible.builtin.file:
-        path: /tmp/diff-demo
-        state: directory
-        mode: "0755"
-
-    - name: Create a config file (single diff, text content)
-      ansible.builtin.copy:
-        dest: /tmp/diff-demo/app.conf
-        content: |
-          [server]
-          port = 8080
-          log_level = info
-        mode: "0644"
-
+    # The tasks below exercise the Spacelift task Diff view, one per backend diff shape.
+    # Each one stands alone because planning runs in --check mode and writes nothing.
     - name: Raise the log level (single diff, text content)
       ansible.builtin.lineinfile:
-        path: /tmp/diff-demo/app.conf
+        path: "{{ playbook_dir }}/files/app.conf"
         regexp: "^log_level"
         line: "log_level = debug"
 
     - name: Touch a marker file (single diff, object sides)
       ansible.builtin.file:
-        path: /tmp/diff-demo/marker
+        path: /tmp/diff-demo-marker
         state: touch
         modification_time: preserve
         access_time: preserve
 
     - name: Rewrite the config and tighten its mode (plural diff, content and attributes)
       ansible.builtin.copy:
-        dest: /tmp/diff-demo/app.conf
+        dest: "{{ playbook_dir }}/files/app.conf"
         content: |
           [server]
           port = 9090
@@ -74,7 +60,7 @@
 
     - name: Write one file per environment (looped diff)
       ansible.builtin.copy:
-        dest: "/tmp/diff-demo/{{ item }}.env"
+        dest: "/tmp/diff-demo-{{ item }}.env"
         content: "ENVIRONMENT={{ item }}\n"
         mode: "0644"
       loop:
